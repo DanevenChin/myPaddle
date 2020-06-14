@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+# @author  : 秦丹峰
+# @contact : daneven.jim@gmail.com
+# @time    : 20-06-12 21:24
+# @file    : data_augment.py
+# @desc    : 数据增强
+"""
+
 import numpy as np
 import cv2
 from PIL import Image, ImageEnhance
@@ -220,6 +229,31 @@ def random_crop(img,
     img = np.asarray(img)
     return img, boxes, labels
 
+# 随机缩放
+def random_interp(img, size, interp=None):
+    '''
+    随机缩放，使用opencv进行resize
+    :param img: 输入原图
+    :param size: 缩放的尺寸
+    :param interp: 缩放模式
+    :return: 缩放后的图片
+    '''
+    interp_method = [
+        cv2.INTER_NEAREST,   # 最近邻插值
+        cv2.INTER_LINEAR,    # 双线性插值（默认设置）
+        cv2.INTER_AREA,      # 使用像素区域关系进行重采样。 它可能是图像抽取的首选方法，因为它会产生无云纹理的结果。 但是当图像缩放时，它类似于INTER_NEAREST方法。
+        cv2.INTER_CUBIC,     # 4x4像素邻域的双三次插值
+        cv2.INTER_LANCZOS4,  # 8x8像素邻域的Lanczos插值
+    ]
+    if not interp or interp not in interp_method:  # 如果为空或者列表中没有该方法，则从列表中随机选择一种
+        interp = interp_method[random.randint(0, len(interp_method) - 1)]
+    h, w, _ = img.shape
+    im_scale_x = size / float(w)
+    im_scale_y = size / float(h)
+    img = cv2.resize(
+        img, None, None, fx=im_scale_x, fy=im_scale_y, interpolation=interp)
+    return img
+
 # 随机翻转
 def random_flip(img, gtboxes, thresh=0.5):
     '''
@@ -245,10 +279,38 @@ def shuffle_gtbox(gtbox, gtlabel):
     gt = gt[idx, :]
     return gt[:, :4], gt[:, 4]
 
+# 图像增广方法汇总
+def image_augment(img, gtboxes, gtlabels, size, means=None):
+    '''
+    在线数据增强入口
+    :param img: 原图
+    :param gtboxes: 真实标注框, 注意是归一化的标注框, [x_center,y_center,w,h]
+    :param gtlabels: 真实类别
+    :param size: 随机缩放中缩放尺寸的设置
+    :param means: 列表, 随机填充中填充颜色的设置
+    :return: img: float32, 增强后的图片
+            gtboxes: float32, 增强图片对应的真实框
+            gtlabels: int32, 增强图片对应的真实类别
+    '''
+    # 随机改变亮暗、对比度和颜色等
+    img = random_distort(img)
+    # 随机填充
+    img, gtboxes = random_expand(img, gtboxes, fill=means)
+    # 随机裁剪
+    img, gtboxes, gtlabels, = random_crop(img, gtboxes, gtlabels)
+    # 随机缩放
+    img = random_interp(img, size)
+    # 随机翻转
+    img, gtboxes = random_flip(img, gtboxes)
+    # 随机打乱真实框排列顺序
+    gtboxes, gtlabels = shuffle_gtbox(gtboxes, gtlabels)
+
+    return img.astype('float32'), gtboxes.astype('float32'), gtlabels.astype('int32')
+
 
 if __name__ == '__main__':
     from data.xml_process import read_xml
-    xml_path = r'/home\qindanfeng\work\deep_learning\train_ssd_mobilenet\roadsign_data\PascalVOC\Annotations_ori/0001_real.xml'
+    xml_path = r'/home\qindanfeng\work\deep_learning\train_ssd_mobilenet\roadsign_data\PascalVOC\Annotations/0001_real.xml'
     xml_path = xml_path.replace('\\', '/')
     (num_bbox, cood, image_full_name, full_path, width_value, height_value) = read_xml(xml_path)
     img = cv2.imread(full_path)
@@ -275,6 +337,7 @@ if __name__ == '__main__':
         if c == 'drink':
             label.append(1)
     label = np.array(label)
+    print(label)
     # print(boxes)
 
     #--- 随机改变亮暗、对比度和颜色等 ---
@@ -360,6 +423,23 @@ if __name__ == '__main__':
     # cv2.imwrite("img/flip.jpg", flip_img)
 
     #----- 随机打乱真实框排列顺序 -----#
-    print(bbox, label)
-    bbox, label = shuffle_gtbox(bbox, label)
-    print(bbox, label)
+    # print(bbox, label)
+    # bbox, label = shuffle_gtbox(bbox, label)
+    # print(bbox, label)
+
+    #---------- 数据增强 ----------#
+    img, gtboxes, gtlabels = image_augment(img, bbox, label, img.shape[1], means=[0,0,255])
+    augment_shape = img.shape
+    print(augment_shape)
+    flip_box = xywh2xyxy(gtboxes)
+    flip_box = flip_box.tolist()
+    print(flip_box)
+    for box in flip_box:
+        print(box)
+        xmin = int(box[0]*augment_shape[1])
+        ymin = int(box[1]*augment_shape[0])
+        xmax = int(box[2]*augment_shape[1])
+        ymax = int(box[3]*augment_shape[0])
+        print(xmin, ymin, xmax, ymax)
+        cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 0, 255), 3)
+    cv2.imwrite("img/augment.jpg", img)

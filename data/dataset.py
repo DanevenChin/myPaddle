@@ -1,10 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+# @author  : 秦丹峰
+# @contact : daneven.jim@gmail.com
+# @time    : 20-06-12 21:24
+# @file    : dataset.py
+# @desc    : 数据集设置
+"""
+
 import os
 import cv2
 import numpy as np
 import xml.etree.ElementTree as ET
+from data.data_augment import image_augment
 
 INSECT_NAMES = ['Boerner', 'Leconte', 'Linnaeus',
                 'acuminatus', 'armandi', 'coleoptera', 'linnaeus']
+
 
 def get_voc_label_names():
     """
@@ -17,6 +28,7 @@ def get_voc_label_names():
         insect_category2id[item] = i
 
     return insect_category2id
+
 
 def get_voc_annotations(cname2cid, datadir):
     """
@@ -31,8 +43,10 @@ def get_voc_annotations(cname2cid, datadir):
     for fname in filenames:
         fid = fname.split('.')[0]
         fpath = os.path.join(datadir, 'annotations', 'xmls', fname)
-        img_file = os.path.join(datadir, 'images', fid + '.jpeg')
         tree = ET.parse(fpath)
+        filename = tree.find('filename').text
+        assert filename.split('.')[0] == fid, "[ERROR] The xml file name does not correspond to the picture name!"
+        img_file = os.path.join(datadir, 'images', filename)
 
         if tree.find('id') is None:  # 如果xml中没有id，则用索引
             im_id = np.array([ct])
@@ -43,9 +57,9 @@ def get_voc_annotations(cname2cid, datadir):
         im_w = float(tree.find('size').find('width').text)
         im_h = float(tree.find('size').find('height').text)
         gt_bbox = np.zeros((len(objs), 4), dtype=np.float32)
-        gt_class = np.zeros((len(objs), ), dtype=np.int32)
-        is_crowd = np.zeros((len(objs), ), dtype=np.int32)
-        difficult = np.zeros((len(objs), ), dtype=np.int32)
+        gt_class = np.zeros((len(objs),), dtype=np.int32)
+        is_crowd = np.zeros((len(objs),), dtype=np.int32)
+        difficult = np.zeros((len(objs),), dtype=np.int32)
         for i, obj in enumerate(objs):
             cname = obj.find('name').text
             gt_class[i] = cname2cid[cname]
@@ -62,26 +76,27 @@ def get_voc_annotations(cname2cid, datadir):
             y2 = min(im_h - 1, y2)
 
             # 这里使用xywh格式来表示目标物体真实框,即 [xmin,ymin,xmax,ymax] -> [x_center,y_center,w,h]
-            gt_bbox[i] = [(x1+x2)/2.0 , (y1+y2)/2.0, x2-x1+1., y2-y1+1.]
+            gt_bbox[i] = [(x1 + x2) / 2.0, (y1 + y2) / 2.0, x2 - x1 + 1., y2 - y1 + 1.]
 
             is_crowd[i] = 0
             difficult[i] = _difficult
 
         voc_rec = {
-            'im_file': img_file,    # 图片路径
-            'im_id': im_id,         # 图片id, numpy
-            'h': im_h,              # 图片高, float
-            'w': im_w,              # 图片宽, float
-            'is_crowd': is_crowd,   # 是否拥挤, numpy
-            'gt_class': gt_class,   # 类别, numpy
-            'gt_bbox': gt_bbox,     # 边框, numpy
-            'gt_poly': [],          # poly,不知道是个啥
+            'im_file': img_file,  # 图片路径
+            'im_id': im_id,  # 图片id, numpy
+            'h': im_h,  # 图片高, float
+            'w': im_w,  # 图片宽, float
+            'is_crowd': is_crowd,  # 是否拥挤, numpy
+            'gt_class': gt_class,  # 类别, numpy
+            'gt_bbox': gt_bbox,  # 边框, numpy
+            'gt_poly': [],  # poly,不知道是个啥
             'difficult': difficult  # 是否为难样本, numpy
-            }
+        }
         if len(objs) != 0:
             records.append(voc_rec)
         ct += 1
     return records
+
 
 def get_bbox(gt_bbox, gt_class):
     '''
@@ -105,8 +120,9 @@ def get_bbox(gt_bbox, gt_class):
             break
     return gt_bbox2, gt_class2
 
+
 def get_img_data_from_file(record):
-    '''
+    """
     根据标注信息读取图片,并将坐标归一化
     :param record: 输入字典,包含标注信息,详细见下
     :return: img: 图片数据,
@@ -124,7 +140,7 @@ def get_img_data_from_file(record):
             'gt_poly': [],
             'difficult': difficult
             }
-    '''
+    """
 
     im_file = record['im_file']
     h = record['h']
@@ -155,3 +171,24 @@ def get_img_data_from_file(record):
     gt_boxes[:, 3] = gt_boxes[:, 3] / float(h)
 
     return img, gt_boxes, gt_labels, (h, w)
+
+
+def get_img_data(record, size=640):
+    '''
+    获取图片，并对图片做预处理
+    :param record: 字典,图片的相关信息,包含标注信息
+    :param size: 网络的输入尺寸
+    :return: img: 预处理后的图片(已经resize),
+            gt_boxes: numpy, 归一化的标注框,
+            gt_labels: numpy, 真实类别,
+            scales: 图片的原始宽高
+    '''
+    img, gt_boxes, gt_labels, scales = get_img_data_from_file(record)  # 获得一张图片以及对应的标签和宽高尺寸
+    img, gt_boxes, gt_labels = image_augment(img, gt_boxes, gt_labels, size)  # 做数据增强
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    mean = np.array(mean).reshape((1, 1, -1))
+    std = np.array(std).reshape((1, 1, -1))
+    img = (img / 255.0 - mean) / std  # 图片归一化
+    img = img.astype('float32').transpose((2, 0, 1))  # opencv的 HWC -> CHW
+    return img, gt_boxes, gt_labels, scales

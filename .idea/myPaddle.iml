@@ -5,6 +5,9 @@
     <orderEntry type="jdk" jdkName="Remote Python 3.7.6 (sftp://qindanfeng@192.168.2.237:22222/home/qindanfeng/anaconda3/envs/paddle/bin/python) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="PackageRequirementsSettings">
+    <option name="requirementsPath" value="" />
+  </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="pytest" />
     <option name="PROJECT_TEST_RUNNER" value="pytest" />

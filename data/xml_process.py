@@ -1,4 +1,12 @@
-#encoding:utf-8
+# -*- coding: utf-8 -*-
+"""
+# @author  : 秦丹峰
+# @contact : daneven.jim@gmail.com
+# @time    : 20-06-12 21:24
+# @file    : xml_process.py
+# @desc    : xml的读写、生成
+"""
+
 from xml.dom.minidom import Document
 import xml.etree.ElementTree as ET
 import os
