@@ -205,7 +205,7 @@ class DarkNet53_conv_body(fluid.dygraph.Layer):
             blocks.append(out)
             if i < len(self.stages) - 1:
                 out = self.downsample_list[i](out)
-        print(blocks)
+        # print(blocks)
         return blocks[-1:-4:-1]  # 将C0, C1, C2作为返回值
 
 

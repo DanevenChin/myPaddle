@@ -8,6 +8,10 @@
 @desc    : 非极大值抑制
 """
 
+from utils.bbox_tranform import iou_xyxy_numpy
+import numpy as np
+
+
 # 非极大值抑制
 def nms(bboxes, scores, score_thresh, nms_thresh, pre_nms_topk, i=0, c=0):
     """
@@ -27,7 +31,7 @@ def nms(bboxes, scores, score_thresh, nms_thresh, pre_nms_topk, i=0, c=0):
         for ind in keep_inds:
             current_box = bboxes[cur_ind]
             remain_box = bboxes[ind]
-            iou = box_iou_xyxy(current_box, remain_box)
+            iou = iou_xyxy_numpy(current_box, remain_box)
             if iou > nms_thresh:
                 keep = False
                 break

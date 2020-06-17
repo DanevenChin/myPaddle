@@ -176,6 +176,7 @@ def read_xml(xml_path):
 
     return (num_bbox, cood, image_full_name, full_path, width_value, height_value)
 
+
 def check_xml(xml_path, check_dir=True):
     """
     可视化xml，检查坐标是否有误
@@ -220,6 +221,7 @@ def check_xml(xml_path, check_dir=True):
         cv2.waitKey(1)
         time.sleep(0.8)
 
+
 def iou_xyxy_numpy(boxes1, boxes2):
     """
     :param boxes1: boxes1和boxes2的shape可以不相同，但是需要满足广播机制
@@ -243,6 +245,7 @@ def iou_xyxy_numpy(boxes1, boxes2):
     union_area = boxes1_area + boxes2_area - inter_area
     IOU = 1.0 * inter_area / union_area
     return IOU
+
 
 def add_noobj_xml(xml_path, save_noobj_xml_path, noobj_num=3):
     xml_list = os.listdir(xml_path)
@@ -307,6 +310,7 @@ def add_noobj_xml(xml_path, save_noobj_xml_path, noobj_num=3):
                    width_value, height_value)
         print("[INFO] xml saved!")
 
+
 def change_xml(xml_path):
     xml_list = os.listdir(xml_path)
     for xml in xml_list:
@@ -316,6 +320,7 @@ def change_xml(xml_path):
         image_full_name = xml.replace('.xml', '.jpg')
         print(full_path, image_full_name)
         create_xml(xml_path, num_bbox, cood, image_full_name, full_path, width_value, height_value)
+
 
 if __name__ == '__main__':
     xml_path = r'z:\qindanfeng\work\deep_learning\train_ssd_mobilenet\roadsign_data\PascalVOC\Annotations'

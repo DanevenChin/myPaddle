@@ -46,17 +46,18 @@ def multi_box_iou_xywh(box1, box2):
 
     return inter_area / (b1_area + b2_area - inter_area)
 
+
 def box_crop(boxes, labels, crop, img_shape):
-    '''
+    """
     获得裁剪框
-    :param boxes: numpy,标注框,[x_center,y_center,w,h]
-    :param labels: numpy,类别
-    :param crop: 元组，[xmin,ymin,w,h]
+    :param boxes    : numpy,标注框,[x_center,y_center,w,h]
+    :param labels   : numpy,类别
+    :param crop     : 元组，[xmin,ymin,w,h]
     :param img_shape: 元组，(w,h)，原图的宽高
-    :return: boxes: 裁剪框, [x_center,y_center,w,h]
-            labels: 裁剪框对应的类别,
+    :return: boxes  : 裁剪框, [x_center,y_center,w,h]
+             labels : 裁剪框对应的类别,
             mask.sum(): 裁剪框总数
-    '''
+    """
     x, y, w, h = map(float, crop)
     im_w, im_h = map(float, img_shape)
 
@@ -89,13 +90,14 @@ def box_crop(boxes, labels, crop, img_shape):
 
     return boxes, labels, mask.sum()
 
+
 # 随机改变亮暗、对比度和颜色等
 def random_distort(img):
-    '''
+    """
     随机改变亮暗、对比度和颜色等
     :param img: 输入图片
     :return: img: 增强后的图片
-    '''
+    """
     # 随机改变亮度
     def random_brightness(img, lower=0.5, upper=1.5):
         e = np.random.uniform(lower, upper)
@@ -119,6 +121,7 @@ def random_distort(img):
     img = np.asarray(img)
     return img
 
+
 # 随机填充
 def random_expand(img,
                   gtboxes,
@@ -126,16 +129,16 @@ def random_expand(img,
                   fill=None,
                   keep_ratio=True,
                   thresh=0.5):
-    '''
+    """
     随机填充
-    :param img: 输入图片, BGR格式
-    :param gtboxes: numpy, 归一化的真实框, [x_center,y_center,w,h]
-    :param max_ratio: 原图的最大比率
-    :param fill: 输入列表, 改变填充的颜色
+    :param img       : 输入图片, BGR格式
+    :param gtboxes   : numpy, 归一化的真实框, [x_center,y_center,w,h]
+    :param max_ratio : 原图的最大比率
+    :param fill      : 输入列表, 改变填充的颜色
     :param keep_ratio: bool, True代表长宽比率一致
-    :param thresh: 随机的概率
+    :param thresh    : 随机的概率
     :return: unit8的图片, 归一化的真实框
-    '''
+    """
     if random.random() > thresh:
         return img, gtboxes
 
@@ -167,6 +170,7 @@ def random_expand(img,
 
     return out_img.astype('uint8'), gtboxes
 
+
 # 随机裁剪
 def random_crop(img,
                 boxes,
@@ -175,19 +179,19 @@ def random_crop(img,
                 max_ratio=2.0,
                 constraints=None,
                 max_trial=50):
-    '''
+    """
     随机裁剪
     :param img:
-    :param boxes: numpy，标注框，[x_center,y_center,w,h]
-    :param labels: numpy, 标注框对应的类别
-    :param scales: 裁剪框的尺度
-    :param max_ratio: 纵横比最大值
+    :param boxes      : numpy，标注框，[x_center,y_center,w,h]
+    :param labels     : numpy, 标注框对应的类别
+    :param scales     : 裁剪框的尺度
+    :param max_ratio  : 纵横比最大值
     :param constraints: 列表，与标注框的iou限制
-    :param max_trial: 选择合适裁剪框的重复次数
-    :return: img: 裁剪后的图片,
-             boxes: numpy, 裁剪边框, [x_center,y_center,w,h]
+    :param max_trial  : 选择合适裁剪框的重复次数
+    :return: img   : 裁剪后的图片,
+             boxes : numpy, 裁剪边框, [x_center,y_center,w,h]
              labels: numpy, 裁剪类别
-    '''
+    """
     if len(boxes) == 0:
         return img, boxes
 
@@ -221,7 +225,7 @@ def random_crop(img,
         crop_boxes, crop_labels, box_num = box_crop(boxes, labels, crop, (w, h))
         if box_num < 1:  # 如果裁剪框为0，则继续循环
             continue
-        print(crop)
+        # print(crop)
         img = img.crop((crop[0], crop[1], crop[0] + crop[2],
                         crop[1] + crop[3])).resize(img.size, Image.LANCZOS)
         img = np.asarray(img)
@@ -229,15 +233,16 @@ def random_crop(img,
     img = np.asarray(img)
     return img, boxes, labels
 
+
 # 随机缩放
 def random_interp(img, size, interp=None):
-    '''
+    """
     随机缩放，使用opencv进行resize
     :param img: 输入原图
     :param size: 缩放的尺寸
     :param interp: 缩放模式
     :return: 缩放后的图片
-    '''
+    """
     interp_method = [
         cv2.INTER_NEAREST,   # 最近邻插值
         cv2.INTER_LINEAR,    # 双线性插值（默认设置）
@@ -254,21 +259,23 @@ def random_interp(img, size, interp=None):
         img, None, None, fx=im_scale_x, fy=im_scale_y, interpolation=interp)
     return img
 
+
 # 随机翻转
 def random_flip(img, gtboxes, thresh=0.5):
-    '''
+    """
     随机翻转
     :param img: 输入图片
     :param gtboxes: numpy，归一化的真实框
     :param thresh: 随机阈值
     :return: img: 翻转后的图片,
              gtboxes: numpy, 翻转后的归一化坐标
-    '''
+    """
     if random.random() > thresh:
-        print("1")
+        # print("1")
         img = img[:, ::-1, :]
         gtboxes[:, 0] = 1.0 - gtboxes[:, 0]
     return img.astype('uint8'), gtboxes
+
 
 # 随机打乱真实框排列顺序
 def shuffle_gtbox(gtbox, gtlabel):
@@ -279,9 +286,10 @@ def shuffle_gtbox(gtbox, gtlabel):
     gt = gt[idx, :]
     return gt[:, :4], gt[:, 4]
 
+
 # 图像增广方法汇总
 def image_augment(img, gtboxes, gtlabels, size, means=None):
-    '''
+    """
     在线数据增强入口
     :param img: 原图
     :param gtboxes: 真实标注框, 注意是归一化的标注框, [x_center,y_center,w,h]
@@ -291,7 +299,7 @@ def image_augment(img, gtboxes, gtlabels, size, means=None):
     :return: img: float32, 增强后的图片
             gtboxes: float32, 增强图片对应的真实框
             gtlabels: int32, 增强图片对应的真实类别
-    '''
+    """
     # 随机改变亮暗、对比度和颜色等
     img = random_distort(img)
     # 随机填充

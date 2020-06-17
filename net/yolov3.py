@@ -34,6 +34,7 @@ class Upsample(fluid.dygraph.Layer):
             input=inputs, scale=self.scale, actual_shape=out_shape)
         return out
 
+
 # 定义YOLO-V3模型
 class YOLOv3(fluid.dygraph.Layer):
     def __init__(self, num_classes=7, is_train=True):
@@ -120,7 +121,7 @@ class YOLOv3(fluid.dygraph.Layer):
         """
         self.losses = []
         downsample = 32
-        for i, out in enumerate(outputs): # 对三个层级分别求损失函数
+        for i, out in enumerate(outputs):  # 对三个层级分别求损失函数
             anchor_mask_i = anchor_masks[i]
             loss = fluid.layers.yolov3_loss(
                     x=out,                        # out是P0, P1, P2中的一个
@@ -132,7 +133,7 @@ class YOLOv3(fluid.dygraph.Layer):
                     class_num=self.num_classes,   # 分类类别数
                     ignore_thresh=ignore_thresh,  # 当预测框与真实框IoU > ignore_thresh，标注objectness = -1
                     downsample_ratio=downsample,  # 特征图相对于原图缩小的倍数，例如P0是32， P1是16，P2是8
-                    use_label_smooth=False)       # 使用label_smooth训练技巧时会用到，这里没用此技巧，直接设置为False
+                    use_label_smooth=use_label_smooth)       # 使用label_smooth训练技巧时会用到，这里没用此技巧，直接设置为False
             self.losses.append(fluid.layers.reduce_mean(loss))  # reduce_mean对每张图片求和
             downsample = downsample // 2  # 下一级特征图的缩放倍数会减半
         return sum(self.losses)  # 对每个层级求和

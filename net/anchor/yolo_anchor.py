@@ -10,6 +10,7 @@
 import numpy as np
 from utils.bbox_tranform import xywh2xyxy, iou_xyxy_numpy
 
+
 # 标注预测框的objectness
 def get_objectness_label(img,
                          gt_boxes,
